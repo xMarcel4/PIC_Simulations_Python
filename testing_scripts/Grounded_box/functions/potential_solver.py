@@ -4,7 +4,7 @@ Created on Mon Aug 26 16:00:43 2024
 
 @author: marce
 """
-from fields_2 import *
+from fields import *
 from world import *
 import numpy as np
 from math import sqrt

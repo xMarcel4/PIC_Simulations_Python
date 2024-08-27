@@ -4,18 +4,16 @@ Created on Mon Aug 26 11:38:32 2024
 
 @author: marce
 """
-
-from vec3 import Vec3
-from fields_2 import *
-from world import *
-from output import *
-from potential_solver import *
-#print("\033[H\033[J")
+import functions as f
+import time
+print("\033[H\033[J")
  
 
 if __name__ == "__main__":
+    start_time = time.time()
+
     # Initialize the domain
-    world = World(21, 21, 21)
+    world = f.World(21, 21, 21)
     world.set_extents([-0.1, -0.1, 0.0], [0.1, 0.1, 0.2])
     
     # Set phi[i=0] = 1
@@ -29,13 +27,19 @@ if __name__ == "__main__":
             world.phi.w_at(i, j, 0, 2)
     
     # Initialize and solve potential
-    solver = PotentialSolver(world, max_it=1000, tol=1e-6)
+    solver = f.PotentialSolver(world, max_it=1000, tol=1e-6)
     solver.solve()
     solver.compute_ef()
     
     # Output results
-    Output.create_results_dir()
-    Output.fields(world)
+    f.Output.create_results_dir()
+    f.Output.fields(world)
+    
+    
+    elapsed_time =  time.time() - start_time
+    
+    # Print the elapsed time
+    print(f"Elapsed time: {elapsed_time:.2f} seconds")
 
 
     # Print the fields and properties

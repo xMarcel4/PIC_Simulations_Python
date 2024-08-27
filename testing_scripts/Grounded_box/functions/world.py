@@ -6,8 +6,7 @@ Created on Mon Aug 26 14:30:51 2024
 """
 
 import numpy as np
-from fields_2 import Field
-from fields_2 import *
+from fields import *
 
 class Const:
     EPS_0 = 8.8541878e-12   # C/V/m, vacuum permittivity
