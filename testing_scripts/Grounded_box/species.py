@@ -114,12 +114,15 @@ class Species:
 
     def load_particles_box_qs(self, x1, x2, num_den, num_sim):
         box_vol = np.prod([x2[i] - x1[i] for i in range(3)])
-        num_sim_tot = np.prod([num_sim[i] - 1 for i in range(3)])
+        num_sim_tot = np.prod([num_sim[i] - 1 for i in range(3)])  # Total number of simulation particles
         num_real = num_den * box_vol
-        mpw = num_real / num_sim_tot
-
+        mpw = num_real / num_sim_tot  # Macroparticle weight
+    
+        # Compute particle grid spacing
         di, dj, dk = [(x2[i] - x1[i]) / (num_sim[i] - 1) for i in range(3)]
-
+    
+        particle_count = 0  # To keep track of particle loading progress
+    
         for i in range(num_sim[0]):
             for j in range(num_sim[1]):
                 for k in range(num_sim[2]):
@@ -128,15 +131,20 @@ class Species:
                         x1[1] + j * dj,
                         x1[2] + k * dk
                     ]
-
+    
+                    # Adjust particles on max faces back into the domain
                     if pos[0] == x2[0]: pos[0] -= 1e-4 * di
                     if pos[1] == x2[1]: pos[1] -= 1e-4 * dj
                     if pos[2] == x2[2]: pos[2] -= 1e-4 * dk
-
-                    w = 1
+    
+                    w = 1  # Relative weight
                     if i == 0 or i == num_sim[0] - 1: w *= 0.5
                     if j == 0 or j == num_sim[1] - 1: w *= 0.5
                     if k == 0 or k == num_sim[2] - 1: w *= 0.5
-
-                    vel = Vec3(0, 0, 0)
-                    self.add_particle(pos, vel, mpw * w)
+    
+                    vel = Vec3(0, 0, 0)  # Initialize velocity as stationary
+                    self.add_particle(pos, vel, mpw * w)  # Add to the particles list
+    
+                    particle_count += 1
+                    if particle_count % 1000 == 0:
+                        print(f"Loaded {particle_count}/{num_sim_tot} particles")

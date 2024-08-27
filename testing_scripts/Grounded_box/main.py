@@ -30,11 +30,14 @@ if __name__ == "__main__":
     solver.solve()
     solver.compute_ef()
 
-    # Create particles
-    np_ions = 800000 # number of simulation ions
-    np_eles = 100000  # number of simulation electrons
-    species[0].load_particles_box_qs(world.get_x0(), world.get_xm(), 1e11, np_ions)  # ions
-    species[1].load_particles_box_qs(world.get_x0(), world.get_xc(), 1e11, np_eles)  # electrons
+    # Define grid sizes for ions and electrons
+    np_ions_grid = [21, 21, 21]  # Equivalent to int3 np_ions_grid = { 21,21,21 }
+    np_eles_grid = [41, 41, 41]  # Equivalent to int3 np_eles_grid = { 41,41,41 }
+    
+    # Load particles using the quiet start method
+    species[0].load_particles_box_qs(world.get_x0(), world.get_xm(), 1e11, np_ions_grid)  # Ions
+    species[1].load_particles_box_qs(world.get_x0(), world.get_xc(), 1e11, np_eles_grid)  # Electrons
+
     print('particles loaded')
     
     # Update fields
