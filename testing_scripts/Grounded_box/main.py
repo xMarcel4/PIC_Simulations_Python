@@ -9,48 +9,44 @@ from output import *
 from vec3 import *
 from potential_solver import *
 from world import *
-#print("\033[H\033[J")
- 
+from species import *
+print("\033[H\033[J")
 
 if __name__ == "__main__":
-    start_time = time.time()
+    print("Initializing the world...")
     # Initialize the domain
-    world = World(21, 21, 21)
-    world.set_extents([-0.1, -0.1, 0.0], [0.1, 0.1, 0.2])
-    
-    # Set phi[i=0] = 1
-    for j in range(world.nj):
-        for k in range(world.nk):
-            world.phi.w_at(0, j, k, 1)
+    world = World(21, 21, 21)  # mesh size
+    world.set_extents([-0.1, -0.1, 0.0], [0.1, 0.1, 0.2])  # start and end of world
+    world.set_time(2e-10, 1000)  # time step size and number of time steps
 
-    # Set phi[k=0] = 2
-    for i in range(world.ni):
-        for j in range(world.nj):
-            world.phi.w_at(i, j, 0, 2)
-    
-    # Initialize and solve potential
-    solver = PotentialSolver(world, max_it=1000, tol=1e-6)
+    # Set up particle species
+    species = [
+        Species("O+", 16 * Const.AMU, Const.QE, world),
+        Species("e-", Const.ME, -1 * Const.QE, world)
+    ]
+
+    # Initialize potential solver and solve initial potential
+    solver = PotentialSolver(world, 10000, 1e-6)
     solver.solve()
     solver.compute_ef()
-    
-    # Output results
-    #Output.create_results_dir()
-    Output.fields(world, filename_prefix="Grounded_box_no_particles_wall_potential")
-       
-    # Calculate the elapsed time
-    elapsed_time = time.time() - start_time
-    
-    # Print the elapsed time
-    print(f"Elapsed time: {elapsed_time:.2f} seconds")
 
-    # Print the fields and properties
-    # print("rho",field_output(world.rho), "\n")
-    # print("phi",field_output(world.phi), "\n")
-    # print("ef",field_output(world.ef), "\n")
-    # print("node_vol",field_output(world.node_vol), "\n")
+    # Create particles
+    np_ions = 800000 # number of simulation ions
+    np_eles = 100000  # number of simulation electrons
+    species[0].load_particles_box_qs(world.get_x0(), world.get_xm(), 1e11, np_ions)  # ions
+    species[1].load_particles_box_qs(world.get_x0(), world.get_xc(), 1e11, np_eles)  # electrons
+    print('particles loaded')
+    
+    # Update fields
+for index, sp in enumerate(species):
+    print(f"Computing number density for species {index + 1}/{len(species)}: {sp.name}")
+    sp.compute_number_density()
 
-    # print("x0\t", world.get_x0(), "\n")
-    # print("xc\t", world.get_xc(), "\n")
-    # print("xm\t", world.get_xm(), "\n")
-    # print("dh\t", world.get_dh(), "\n")
-    # print("nn\t", world.get_nn(), "\n")
+
+world.compute_charge_density(species)
+solver.solve()
+solver.compute_ef()
+
+# Output results
+filename = 'Particles_QS'
+Output.fields(world, species,filename)

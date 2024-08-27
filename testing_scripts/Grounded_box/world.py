@@ -53,6 +53,14 @@ class World:
 
         self.compute_node_volumes()
 
+    def x_to_l(self, x):
+        """Convert a physical position x to logical coordinates."""
+        lc = np.zeros(3)
+        lc[0] = (x[0] - self.x0[0]) / self.dh[0]
+        lc[1] = (x[1] - self.x0[1]) / self.dh[1]
+        lc[2] = (x[2] - self.x0[2]) / self.dh[2]
+        return lc
+    
     def compute_node_volumes(self):
         for i in range(self.ni):    # loop over nodes
             for j in range(self.nj):
@@ -64,10 +72,16 @@ class World:
                     self.node_vol.w_at(i, j, k, V)
 
     def compute_charge_density(self, species_list):
-        self.rho = 0
-        for species in species_list:
-            if species.charge != 0:
-                self.rho += species.charge * species.den
+        print("Computing charge density...")
+        self.rho = Field(self.ni, self.nj, self.nk)  # Reset charge density field to zero
+        for idx, sp in enumerate(species_list):
+            if sp.charge != 0:
+                self.rho += sp.charge * sp.den
+
+            print(f"Processed {idx + 1}/{len(species_list)} species")
+
+        print("Finished computing charge density")
+
 
     def get_pe(self):
         pe = 0

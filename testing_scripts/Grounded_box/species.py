@@ -68,11 +68,26 @@ class Species:
                     part.vel[i] *= -1.0
 
     def compute_number_density(self):
-        self.den = Field(self.world.ni, self.world.nj, self.world.nk)  # reset density to 0
-        for part in self.particles:
+        print(f"Computing number density for {self.name}...")
+    
+        # Reset density to 0
+        self.den = Field(self.world.ni, self.world.nj, self.world.nk)
+    
+        # Loop over particles and compute the number density
+        for idx, part in enumerate(self.particles):
             lc = self.world.x_to_l(part.pos)
             self.den.scatter(lc, part.mpw)
+    
+            # Print progress every 1000 particles (adjust as needed)
+            if (idx + 1) % 100 == 0 or (idx + 1) == len(self.particles):
+                print(f"Processed {idx + 1}/{len(self.particles)} particles")
+    
+        # Divide by node volume to get the final density
         self.den /= self.world.node_vol
+    
+        print(f"Finished computing number density for {self.name}")
+
+
 
     def add_particle(self, pos, vel, mpw):
         if not self.world.in_bounds(pos):
@@ -87,11 +102,15 @@ class Species:
         num_real = num_den * box_vol
         mpw = num_real / num_sim
 
-        for _ in range(num_sim):
+        for idx in range(num_sim):
             pos = [x1[i] + random.random() * (x2[i] - x1[i]) for i in range(3)]
-            #inital velocity 0
+            # Initial velocity is 0
             vel = Vec3(0, 0, 0)
             self.add_particle(pos, vel, mpw)
+    
+            # Print progress every 1000 particles
+            if (idx + 1) % 100000 == 0 or (idx + 1) == num_sim:
+                print(f"Loaded {idx + 1}/{num_sim} particles")
 
     def load_particles_box_qs(self, x1, x2, num_den, num_sim):
         box_vol = np.prod([x2[i] - x1[i] for i in range(3)])

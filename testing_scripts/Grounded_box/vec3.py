@@ -1,4 +1,5 @@
 # Example usage of the class with operations
+import numpy as np
 class Vec3:
     def __init__(self, *args):
         if len(args) == 3:
@@ -27,8 +28,12 @@ class Vec3:
         return self
 
     def __isub__(self, other):
-        for i in range(3):
-            self.d[i] -= other(i)
+        if isinstance(other, Vec3):
+            self.d -= other.d
+        elif isinstance(other, (list, tuple, np.ndarray)) and len(other) == 3:
+            self.d -= other
+        else:
+            raise TypeError("Unsupported type for subtraction")
         return self
 
     def __imul__(self, other):

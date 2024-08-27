@@ -8,6 +8,7 @@ from fields import *
 from world import *
 import numpy as np
 from math import sqrt
+import time
 
 class PotentialSolver:
     def __init__(self, world, max_it, tol):
@@ -30,7 +31,10 @@ class PotentialSolver:
 
         # solve potential
         for it in range(self.max_solver_it):
+            #print(f"Iteration {it + 1}/{self.max_solver_it}")
+            time.sleep(0.01)
             for i in range(1, self.world.ni - 1):
+                #(f"test {i} out of {self.world.ni - 1}")
                 for j in range(1, self.world.nj - 1):
                     for k in range(1, self.world.nk - 1):
                         # standard internal open node
@@ -44,7 +48,8 @@ class PotentialSolver:
                         phi.w_at(i, j, k, phi(i, j, k) + 1.4 * (phi_new - phi(i, j, k)))
 
             # check for convergence every 25 iterations
-            if it % 25 == 0:
+            if it % 25 == 0 and it != 0:
+                #print('check for convergence')
                 sum_sq = 0
                 for i in range(1, self.world.ni - 1):
                     for j in range(1, self.world.nj - 1):
@@ -63,8 +68,8 @@ class PotentialSolver:
                     break
 
         if not converged:
-            print(f"GS failed to converge, L2={L2}")
-        return converged
+            #print(f"GS failed to converge, L2={L2}")
+            return converged
 
     def compute_ef(self):
         phi = self.world.phi  # reference to world.phi

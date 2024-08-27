@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from datetime import datetime
-
+from world import *
 class Output:
 
     @staticmethod
@@ -19,9 +19,11 @@ class Output:
         
         # Ensure the output directory exists
         Output.create_results_dir(output_dir)
+        
+        timestamp = datetime.now().strftime("%d_%m_%Y_%H%M%S")
 
         # Construct the filename using the timestep
-        filename = os.path.join(output_dir, f"{filename_prefix}_{world.getTs():05d}.vti")
+        filename = os.path.join(output_dir, f"{filename_prefix}_{timestamp}.vti")
         
         try:
             with open(filename, 'w') as out:
