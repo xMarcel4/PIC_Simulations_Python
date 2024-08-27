@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from datetime import datetime
 
 class Output:
 
@@ -12,13 +13,16 @@ class Output:
             print(f"Failed to create directory '{output_dir}': {error}")
 
     @staticmethod
-    def fields(world, output_dir="results"):
+    def fields(world, species_list, filename_prefix="fields"):
+        # The output directory is predefined as 'results'
+        output_dir = "results"
+        
         # Ensure the output directory exists
         Output.create_results_dir(output_dir)
 
-        # Construct the full path for the output file
-        filename = os.path.join(output_dir, "fields.vti")
-
+        # Construct the filename using the timestep
+        filename = os.path.join(output_dir, f"{filename_prefix}_{world.getTs():05d}.vti")
+        
         try:
             with open(filename, 'w') as out:
                 # Write the VTK header for ImageData
@@ -55,6 +59,12 @@ class Output:
                 out.write(Output.vector_field_data_to_string(world.ef))
                 out.write('</DataArray>\n')
 
+                # Write species number densities
+                for sp in species_list:
+                    out.write(f'<DataArray Name="nd.{sp.name}" NumberOfComponents="1" format="ascii" type="Float64">\n')
+                    out.write(Output.field_data_to_string(sp.den))
+                    out.write('</DataArray>\n')
+
                 # Close tags
                 out.write('</PointData>\n')
                 out.write('</ImageData>\n')
@@ -64,6 +74,43 @@ class Output:
 
         except IOError as e:
             print(f"Error writing to file {filename}: {e}")
+
+    @staticmethod
+    def screen_output(world, species_list):
+        print(f"ts: {world.getTs()}")
+        for sp in species_list:
+            print(f"\t{sp.name}: {sp.getNp()}")
+        print("")
+
+    @staticmethod
+    def diag_output(world, species_list):
+        diag_file = "runtime_diags.csv"
+        
+        # Check if the file exists to write the header
+        write_header = not os.path.exists(diag_file)
+        
+        with open(diag_file, 'a') as f_diag:
+            if write_header:
+                # Write header
+                header = "ts,time,wall_time"
+                for sp in species_list:
+                    header += f",mp_count.{sp.name},real_count.{sp.name},px.{sp.name},py.{sp.name},pz.{sp.name},KE.{sp.name}"
+                header += ",PE,total_E\n"
+                f_diag.write(header)
+            
+            # Write data
+            line = f"{world.getTs()},{world.getTime()},{world.getWallTime()}"
+            
+            total_KE = 0
+            for sp in species_list:
+                KE = sp.getKE()
+                total_KE += KE
+                mom = sp.getMomentum()
+                line += f",{sp.getNp()},{sp.getRealCount()},{mom[0]},{mom[1]},{mom[2]},{KE}"
+            
+            PE = world.getPE()
+            line += f",{PE},{PE + total_KE}\n"
+            f_diag.write(line)
 
     @staticmethod
     def field_data_to_string(field):
