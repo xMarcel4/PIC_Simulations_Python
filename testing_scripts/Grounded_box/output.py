@@ -8,14 +8,15 @@ class Output:
     def create_results_dir(output_dir="results"):
         try:
             os.makedirs(output_dir, exist_ok=True)
-            print(f"Directory '{output_dir}' created successfully.")
+            # print(f"Directory '{output_dir}' created successfully.")
         except OSError as error:
-            print(f"Failed to create directory '{output_dir}': {error}")
+            return 0
+            # print(f"Failed to create directory '{output_dir}': {error}")
 
     @staticmethod
-    def fields(world, species_list, filename_prefix="fields"):
+    def fields(world, species_list, filename_prefix="fields",project_dir=""):
         # The output directory is predefined as 'results'
-        output_dir = "results"
+        output_dir = os.path.join(project_dir, "results")
         
         # Ensure the output directory exists
         Output.create_results_dir(output_dir)
@@ -72,21 +73,23 @@ class Output:
                 out.write('</ImageData>\n')
                 out.write('</VTKFile>\n')
 
-            print(f"Data successfully written to {filename}")
+            #print(f"Data successfully written to {filename}")
 
         except IOError as e:
             print(f"Error writing to file {filename}: {e}")
 
     @staticmethod
     def screen_output(world, species_list):
-        print(f"ts: {world.getTs()}")
+        output = f"ts: {world.get_ts()}"
         for sp in species_list:
-            print(f"\t{sp.name}: {sp.getNp()}")
-        print("")
+            real_count = int(round(sp.get_real_count()))  # Ensure it's an integer
+            output += f"  {sp.name}: {real_count}"
+        print(output)
 
     @staticmethod
-    def diag_output(world, species_list):
-        diag_file = "runtime_diags.csv"
+    def diag_output(world, species_list, project_dir=""):
+        # print(f"Iteration: {world.get_ts()}")
+        diag_file = os.path.join(project_dir, "runtime_diags.csv")
         
         # Check if the file exists to write the header
         write_header = not os.path.exists(diag_file)
@@ -101,18 +104,55 @@ class Output:
                 f_diag.write(header)
             
             # Write data
-            line = f"{world.getTs()},{world.getTime()},{world.getWallTime()}"
+            line = f"{world.get_ts()},{world.get_time()},{world.get_wall_time()}"
             
             total_KE = 0
             for sp in species_list:
-                KE = sp.getKE()
+                KE = sp.get_ke()
                 total_KE += KE
-                mom = sp.getMomentum()
-                line += f",{sp.getNp()},{sp.getRealCount()},{mom[0]},{mom[1]},{mom[2]},{KE}"
+                mom = sp.get_momentum()
+                line += f",{sp.get_np()},{sp.get_real_count()},{mom[0]},{mom[1]},{mom[2]},{KE}"
             
-            PE = world.getPE()
-            line += f",{PE},{PE + total_KE}\n"
+            PE = world.get_pe()
+            total_E = PE + total_KE
+            line += f",{PE},{total_E}\n"
             f_diag.write(line)
+        
+        # # Print the energy values to the console
+        # print(f"Total KE: {total_KE}")
+        # print(f"PE: {PE}")
+        # print(f"Total Energy: {total_E}")
+
+       
+    # @staticmethod
+    # def diag_output(world, species_list, project_dir=""):
+    #     diag_file = os.path.join(project_dir, "runtime_diags.csv")
+        
+    #     # Check if the file exists to write the header
+    #     write_header = not os.path.exists(diag_file)
+        
+    #     with open(diag_file, 'a') as f_diag:
+    #         if write_header:
+    #             # Write header
+    #             header = "ts,time,wall_time"
+    #             for sp in species_list:
+    #                 header += f",mp_count.{sp.name},real_count.{sp.name},px.{sp.name},py.{sp.name},pz.{sp.name},KE.{sp.name}"
+    #             header += ",PE,total_E\n"
+    #             f_diag.write(header)
+            
+    #         # Write data
+    #         line = f"{world.get_ts()},{world.get_time()},{world.get_wall_time()}"
+            
+    #         total_KE = 0
+    #         for sp in species_list:
+    #             KE = sp.get_ke()
+    #             total_KE += KE
+    #             mom = sp.get_momentum()
+    #             line += f",{sp.get_np()},{sp.get_real_count()},{mom[0]},{mom[1]},{mom[2]},{KE}"
+            
+    #         PE = world.get_pe()
+    #         line += f",{PE},{PE + total_KE}\n"
+    #         f_diag.write(line)
 
     @staticmethod
     def field_data_to_string(field):

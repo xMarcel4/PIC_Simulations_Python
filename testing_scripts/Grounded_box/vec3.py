@@ -1,5 +1,6 @@
 # Example usage of the class with operations
 import numpy as np
+from numba import jit
 class Vec3:
     def __init__(self, *args):
         if len(args) == 3:
@@ -23,10 +24,14 @@ class Vec3:
         return self.d == other.d
 
     def __iadd__(self, other):
-        for i in range(3):
-            self.d[i] += other(i)
+        if isinstance(other, Vec3):
+            self.d += other.d
+        elif isinstance(other, np.ndarray):
+            self.d += other
+        else:
+            raise TypeError("Unsupported type for addition")
         return self
-
+    
     def __isub__(self, other):
         if isinstance(other, Vec3):
             self.d -= other.d
@@ -72,6 +77,9 @@ class Vec3:
 
     def __eq__(self, other):
         return all(self.d[i] == other[i] for i in range(3))
+    
+    def copy(self):
+        return Vec3(self.d[:])
     
 # Aliases for Vec3 with specific types
 #Double3 = Vec3

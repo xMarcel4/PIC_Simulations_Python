@@ -10,6 +10,7 @@ from world import *
 from fields import *
 from vec3 import *
 import random
+from numba import jit
 
 class Particle:
     def __init__(self, pos, vel, mpw):
@@ -46,51 +47,177 @@ class Species:
             v2 = part.vel[0] ** 2 + part.vel[1] ** 2 + part.vel[2] ** 2
             ke += part.mpw * v2
         return 0.5 * self.mass * ke
-
+    
+    # @nijt
     def advance(self):
         dt = self.world.get_dt()
         x0 = self.world.get_x0()
         xm = self.world.get_xm()
+        # print(f"dt: {dt}")
+        # print(f"x0: {x0}")
+        # print(f"xm: {xm}")  
 
-        for part in self.particles:
+        # Set the particle index to debug
+        debug_particle_index = 1000
+    
+        # Iterate over all particles
+        for p_idx, part in enumerate(self.particles):
+            
+            # Check if this is the particle you want to debug
+            # if p_idx == debug_particle_index:
+                # print(f"Debugging Particle {p_idx}:")
+                # print(f"Initial position: ({part.pos[0]}, {part.pos[1]}, {part.pos[2]})")
+                # print(f"Initial velocity: ({part.vel[0]}, {part.vel[1]}, {part.vel[2]})")
+            
+            # Get logical coordinate of particle's position
             lc = self.world.x_to_l(part.pos)
+    
+            # Get electric field at particle position
             ef_part = self.world.ef.gather(lc)
+    
+            # if p_idx == debug_particle_index:
+            #     print(f"Logical coordinates: ({lc[0]}, {lc[1]}, {lc[2]})")
+            #     print(f"Electric field at position: ({ef_part[0]}, {ef_part[1]}, {ef_part[2]})")
+            #     print(f"Charge: {self.charge} \t mass: {self.mass}")
 
+            
+            # Update velocity from F = qE = ma
             part.vel += ef_part * (dt * self.charge / self.mass)
-            part.pos += part.vel * dt
+    
+            # if p_idx == debug_particle_index:
+            #     print(f"Updated velocity: ({part.vel[0]}, {part.vel[1]}, {part.vel[2]})")
+            
+            # Update position from v = dx/dt
+            # part.pos += part.vel * dt
+            part.pos[0] = part.pos[0] + part.vel[0] *dt
+            part.pos[1] = part.pos[1] + part.vel[1] *dt
+            part.pos[2] = part.pos[2] + part.vel[2] *dt
 
+    
+            # if p_idx == debug_particle_index:
+                # print(f"Updated position: ({part.pos[0]}, {part.pos[1]}, {part.pos[2]})")
+            
+            # Reflect particles leaving the domain
             for i in range(3):
                 if part.pos[i] < x0[i]:
+                    # if p_idx == debug_particle_index:
+                    #     print(f"Particle out of lower bound in dimension {i}:")
+                    #     print(f"Original Position: {part.pos[i]}, Velocity: {part.vel[i]}")
+                    
+                    # Reflecting the particle
                     part.pos[i] = 2 * x0[i] - part.pos[i]
                     part.vel[i] *= -1.0
+                    # if p_idx == debug_particle_index:
+                    #     print(f"Reflected Position: {part.pos[i]}, Velocity: {part.vel[i]}")
+                    
                 elif part.pos[i] >= xm[i]:
+                    # if p_idx == debug_particle_index:
+    
+                    #     print(f"Particle out of upper bound in dimension {i}:")
+                    #     print(f"Original Position: {part.pos[i]}, Velocity: {part.vel[i]}")
+                        
+                    # Reflecting the particle
                     part.pos[i] = 2 * xm[i] - part.pos[i]
                     part.vel[i] *= -1.0
 
+                    # if p_idx == debug_particle_index:
+                    #     print(f"Reflected Position: {part.pos[i]}, Velocity: {part.vel[i]}")
+
+    
+            # if p_idx == debug_particle_index:
+            #     print(f"Final position after reflection: ({part.pos[0]}, {part.pos[1]}, {part.pos[2]})")
+            #     print(f"Final velocity after reflection: ({part.vel[0]}, {part.vel[1]}, {part.vel[2]})")
+    
+
+    
+    # maybe add old compute number density with /= 
+    
+    # def compute_number_density(self):
+    #     print("Compute Number Density:")
+    #     # Initialize the density field to zero
+    #     self.den = Field(self.world.ni, self.world.nj, self.world.nk)  # Reset density to zero
+    #     print("Initialized density field to zero.")
+    
+    #     # Scatter particle weights into the density field
+    #     for part in self.particles:
+    #         lc = self.world.x_to_l(part.pos)
+    #         self.den.scatter(lc, part.mpw)  # Assuming scatter is defined
+    #     print("Scattered particle weights into the density field.")
+    
+    #     # Print the density at the specific node (10, 10, 10) after scattering
+    #     print(f"Density at node (10, 10, 10) after scattering: {self.den.data[10, 10, 10]}")
+    #     print(f"Node volume at node (10, 10, 10): {self.world.node_vol.data[10, 10, 10]}")
+
+    
+    #     # Perform element-wise division by the node volumes using __itruediv__
+    #     try:
+    #         print("Performing element-wise division by the node volumes.")
+    #         self.den /= self.world.node_vol
+    #     except Exception as e:
+    #         print(f"Error during division: {e}")
+    #         raise
+    
+    #     # Print the density at the specific node (10, 10, 10) after division
+    #     print(f"Density at node (10, 10, 10) after division by node volumes: {self.den.data[10, 10, 10]}")
+    
+    #     # print("Finished computing number density.")
+
+         
+
+       # Perform element-wise division by the node volumes directly within the function
+
+    # @nijt
     def compute_number_density(self):
-        print(f"Computing number density for {self.name}...")
+        # print("Compute Number Density:")
+
+        # Initialize the density field to zero
+        self.den = Field(self.world.ni, self.world.nj, self.world.nk)  # Reset density to zero
+        # print("Initialized density field to zero.")
+
+            # Set the index of the particle you want to debug
+        debug_particle_index = 1000
+        current_particle_index = 0
     
-        # Reset density to 0
-        self.den = Field(self.world.ni, self.world.nj, self.world.nk)
-    
-        # Loop over particles and compute the number density
-        for idx, part in enumerate(self.particles):
+        # Scatter particle weights into the density field
+        for part in self.particles:
             lc = self.world.x_to_l(part.pos)
-            self.den.scatter(lc, part.mpw)
     
-            # Print progress every 1000 particles (adjust as needed)
-            if (idx + 1) % 100 == 0 or (idx + 1) == len(self.particles):
-                print(f"Processed {idx + 1}/{len(self.particles)} particles")
+            # # Check if this is the particle you want to debug
+            # if current_particle_index == debug_particle_index:
+            #     print(f"Debugging Particle {current_particle_index}:")
+            #     print(f"Physical position: ({part.pos[0]}, {part.pos[1]}, {part.pos[2]})")
+            #     print(f"Logical coordinates: ({lc[0]}, {lc[1]}, {lc[2]})")
+            #     print(f"Macroparticle weight (mpw): {part.mpw}")
     
-        # Divide by node volume to get the final density
-        self.den /= self.world.node_vol
+            # Perform the scatter operation
+            self.den.scatter(lc, part.mpw)  # Assuming scatter is defined
     
-        print(f"Finished computing number density for {self.name}")
+            current_particle_index += 1
+    
+        # # Print the density at the specific node (10, 10, 10) after scattering
+        # print(f"Density at node (10, 10, 10) after scattering: {self.den.data[10, 10, 10]}")
+        # print(f"Node volume at node (10, 10, 10): {self.world.node_vol.data[10, 10, 10]}")
+
+        try:
+            # Direct element-wise division without using __itruediv__
+            for i in range(self.world.ni):
+                for j in range(self.world.nj):
+                    for k in range(self.world.nk):
+                        if self.world.node_vol.data[i, j, k] != 0:
+                            self.den.data[i, j, k] /= self.world.node_vol.data[i, j, k]
+                        else:
+                            self.den.data[i, j, k] = 0  # Handle division by zero
+        except Exception as e:
+            print(f"Error during manual division: {e}")
+            raise
+        # print(f"Density at node (10, 10, 10) after division by node volumes: {self.den.data[10, 10, 10]}")
 
 
 
+    
     def add_particle(self, pos, vel, mpw):
         if not self.world.in_bounds(pos):
+            print("Not in Bounds")
             return
         lc = self.world.x_to_l(pos)
         ef_part = self.world.ef.gather(lc)
@@ -146,5 +273,5 @@ class Species:
                     self.add_particle(pos, vel, mpw * w)  # Add to the particles list
     
                     particle_count += 1
-                    if particle_count % 1000 == 0:
-                        print(f"Loaded {particle_count}/{num_sim_tot} particles")
+                    # if particle_count % 1000 == 0:
+                    #     print(f"Loaded {particle_count}/{num_sim_tot} particles")

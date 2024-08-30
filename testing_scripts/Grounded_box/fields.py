@@ -64,11 +64,10 @@ class Field:
         return self.__repr__()
 
     def __iadd__(self, other):
-        """Implementing in-place addition."""
         if isinstance(other, Field):
-            self.data += other.data
+            self.data += other.data  # Element-wise addition
         else:
-            self.data += other
+            raise ValueError("Cannot add non-Field instance to Field")
         return self
 
     def __imul__(self, scalar):
@@ -76,17 +75,33 @@ class Field:
         return self
     
     def __rmul__(self, scalar):
-        """Allows scalar multiplication in the form scalar * field."""
         return self.__mul__(scalar)
     
 
     def __itruediv__(self, other):
-        with np.errstate(divide='ignore', invalid='ignore'):
-            result = np.true_divide(self.data, other.data)
-            result[~np.isfinite(result)] = 0  # Set -inf, inf, NaN to 0
-        self.data = result
-        return self
+     # print(f"Dividing: self.type={type(self)}, other.type={type(other)}")
+     # print(f"self.data.shape: {self.data.shape}, other.data.shape: {other.data.shape}")
+     
+     # Check if the other instance is a Field and has matching dimensions
+     if not isinstance(other, Field):
+         print(f"Error: Expected Field, but got {type(other)} instead.")
+         raise ValueError("Cannot divide by a non-Field instance")
 
+     if self.data.shape != other.data.shape:
+         print(f"Error: Shape mismatch. self.data.shape={self.data.shape}, other.data.shape={other.data.shape}")
+         raise ValueError("Field shapes do not match for division")
+
+     try:
+         # Perform element-wise division
+         self.data = np.where(other.data != 0, self.data / other.data, 0)
+     except Exception as e:
+         print(f"Error during division: {e}")
+         raise
+     
+     return self
+    
+    
+    # @nijt
     def scatter(self, lc, value):
         # Ensure the logical coordinate is within bounds
         if lc[0] < 0 or lc[0] > (self.ni - 1) or \
@@ -94,10 +109,13 @@ class Field:
            lc[2] < 0 or lc[2] > (self.nk - 1):
             return
     
-        # Compute the cell index and fractional distances
-        i, di = int(lc[0]), lc[0] - int(lc[0])
-        j, dj = int(lc[1]), lc[1] - int(lc[1])
-        k, dk = int(lc[2]), lc[2] - int(lc[2])
+       # Compute the cell index and the fractional distances
+        i = int(lc[0])
+        di = lc[0] - i
+        j = int(lc[1])
+        dj = lc[1] - j
+        k = int(lc[2])
+        dk = lc[2] - k
     
         if self.components == 1:
             # Deposit fractional values to the 8 surrounding nodes for scalar fields
@@ -111,6 +129,7 @@ class Field:
             self.data[i + 1, j + 1, k + 1] += value * di * dj * dk
     
         elif self.components > 1:
+            print("yes")
             # Deposit fractional values to the 8 surrounding nodes for vector fields
             for comp in range(self.components):
                 self.data[i, j, k, comp] += value[comp] * (1 - di) * (1 - dj) * (1 - dk)
@@ -125,12 +144,15 @@ class Field:
         else:
             raise NotImplementedError("Scatter operation is not implemented for this field type.")
 
-
+    # @nijt
     def gather(self, lc):
-        i, di = int(lc[0]), lc[0] - int(lc[0])
-        j, dj = int(lc[1]), lc[1] - int(lc[1])
-        k, dk = int(lc[2]), lc[2] - int(lc[2])
-
+        
+        i = int(lc[0])
+        di = lc[0] - i
+        j = int(lc[1])
+        dj = lc[1] - j
+        k = int(lc[2])
+        dk = lc[2] - k
         if self.components == 1:
             # Scalar field gather operation
             val = (
@@ -146,6 +168,7 @@ class Field:
             return val
 
         elif self.components > 1:
+            # print("Executed components bigger 1")
             # Vector field gather operation
             interpolated = np.zeros(self.components)
             for comp in range(self.components):
@@ -170,10 +193,12 @@ class Field:
         return new_field
 
     def __mul__(self, scalar):
-        """Implementing multiplication with a scalar."""
-        new_field = Field(self.ni, self.nj, self.nk, self.components)
-        new_field.data = self.data * scalar
-        return new_field
+        if isinstance(scalar, (int, float)):
+            result = Field(*self.data.shape)
+            result.data = self.data * scalar
+            return result
+        else:
+            raise TypeError("Scalar multiplication only supports int or float types")
     
 # Overloading the << operator to mimic the stream output in C++
 def field_output(field):
