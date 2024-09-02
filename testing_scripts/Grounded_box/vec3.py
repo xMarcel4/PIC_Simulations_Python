@@ -1,6 +1,6 @@
 # Example usage of the class with operations
 import numpy as np
-from numba import jit
+# from numba import jit
 class Vec3:
     def __init__(self, *args):
         if len(args) == 3:

@@ -84,51 +84,59 @@ if __name__ == "__main__":
     load_particles_time = time.time() - start_time
     print(f"Particles loaded: \t\t\t\t {load_particles_time:.6f} seconds.")
 
-    # Main loop
-    while world.advance_time():
-        print(f"\nLoop Number {world.get_ts()}:")
-
-        loop_start_time = time.time()  # Start timing the loop iteration
-
-        # Update particle velocities and positions
-        update_particles_start = time.time()
-        for sp in species:
-            sp.advance()
-            sp.compute_number_density()
-        update_particles_time = time.time() - update_particles_start
-        print(f"Update particles: \t\t\t\t {update_particles_time:.6f} seconds.")
-
-        # Update charge density
-        compute_charge_density_start = time.time()
-        world.compute_charge_density(species)
-        compute_charge_density_time = time.time() - compute_charge_density_start
-        print(f"Compute charge density: \t\t {compute_charge_density_time:.6f} seconds.")
     
-        # Solve the potential
-        solve_potential_start = time.time()
-        solver.solve()
-        solve_potential_time = time.time() - solve_potential_start
-        print(f"Solve potential: \t\t\t\t {solve_potential_time:.6f} seconds.")
+    # Initialize an array to store the results
+    results = []
     
-        # Compute electric field
-        compute_ef_start = time.time()
-        solver.compute_ef()
-        compute_ef_time = time.time() - compute_ef_start
-        print(f"Compute electric field: \t\t {compute_ef_time:.6f} seconds.")
+    # Define the range for w
+    w_values = np.arange(1.3, 1.7, 0.1)  # 1.2, 1.3, ..., 1.6
+    
+    # Loop over each w value
+    for w in w_values:
+        print(f"Running simulation with w = {w:.1f}")
         
-        #Output.screen_output(world, species)
+        solve_times = []
         
-        # Save data
-        if world.get_ts() % 10 == 0 or world.is_last_time_step():
-            save_data_start = time.time()
-            ts = world.get_ts()
-            filename = f"Particles_QS_ts{ts:05d}"
-            Output.fields(world, species, filename, project_dir)
-            Output.diag_output(world, species, project_dir)
-            save_data_time = time.time() - save_data_start
-            print(f"Save data: \t\t\t\t\t {save_data_time:.6f} seconds.")
+        # Initialize the solver with the current w value
+        solver = PotentialSolver(world, max_it=1000, tol=1e-5, w=w)
         
-        loop_time = time.time() - loop_start_time  # Measure the total loop iteration time
-        print(f"Total loop iteration: \t\t\t {loop_time:.6f} seconds.")
-
-    print(f"\nSimulation took {world.get_wall_time()} seconds.")
+        while world.advance_time():
+            for sp in species:
+                sp.advance()
+                sp.compute_number_density()
+            
+            world.compute_charge_density(species)
+    
+            # Measure the time taken by solver.solve()
+            start_time = time.time()
+            solver.solve()
+            end_time = time.time()
+            solve_duration = end_time - start_time
+            solve_times.append(solve_duration)
+            
+            solver.compute_ef()
+            Output.screen_output(world, species)
+            
+            # Save data periodically
+            if world.get_ts() % 10 == 0 or world.is_last_time_step():
+                ts = world.get_ts()
+                filename = f"Particles_QS_ts{ts:05d}"
+                Output.fields(world, species, filename, project_dir)
+                Output.diag_output(world, species, project_dir)
+        
+        # Calculate the average solve time for this value of w
+        avg_solve_time = np.mean(solve_times)
+        
+        # Store the result in the results array
+        results.append((w, avg_solve_time))
+        
+        # Reset or reinitialize the world, species, and other variables as necessary
+        # (This depends on your specific setup, e.g., reloading initial conditions, resetting time, etc.)
+    
+    # Print out the results
+    print("\nResults:")
+    for w, avg_time in results:
+        print(f"w = {w:.1f}, Average solve time = {avg_time:.6f} seconds")
+    
+    # Optionally, you can save the results array to a file
+    np.savetxt("solve_times.txt", results, header="w value, Average solve time")

@@ -10,7 +10,7 @@ from fields import *
 import numpy as np
 import time
 from vec3 import *
-from numba import jit
+#from numba import jit
 
 class Const:
     EPS_0 = 8.8541878e-12   # C/V/m, vacuum permittivity

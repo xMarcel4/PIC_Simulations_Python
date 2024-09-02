@@ -11,7 +11,7 @@ from potential_solver import *
 from world import *
 from species import *
 import time
-from numba import jit
+#from numba import jit
 print("\033[H\033[J")
 
 if __name__ == "__main__":
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     # Initialize the domain
     world = World(21, 21, 21)  # mesh size
     world.set_extents([-0.1, -0.1, 0.0], [0.1, 0.1, 0.2])  # start and end of world
-    world.set_time(2e-9, 1001)  # time step size and number of time steps
+    world.set_time(2e-9, 501)  # time step size and number of time steps
 
     # Set up particle species
     species = [
@@ -63,23 +63,10 @@ if __name__ == "__main__":
         world.compute_charge_density(species)
         # Assuming world.rho is a 3D NumPy array or a similar structure
 
-        # Measure the time taken by solver.solve()
-        start_time = time.time()
         solver.solve()
-        end_time = time.time()
-        solve_duration = end_time - start_time
-        print(f"solver.solve() took {solve_duration:.6f} seconds")
         
-        # Measure the time taken by solver.compute_ef()
-        start_time = time.time()
         solver.compute_ef()
-        end_time = time.time()
-        compute_ef_duration = end_time - start_time
-        print(f"solver.compute_ef() took {compute_ef_duration:.6f} seconds")
         
-                
-        
-                
         Output.screen_output(world, species)
         # Save data
         # Save data

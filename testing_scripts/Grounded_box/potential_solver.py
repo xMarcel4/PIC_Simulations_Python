@@ -9,15 +9,17 @@ from world import *
 import numpy as np
 from math import sqrt
 import time
-from numba import njit
+# from numba import njit
 
 class PotentialSolver:
-    def __init__(self, world, max_it, tol):
+    def __init__(self, world, max_it, tol, w=1.5):
         self.world = world
         self.max_solver_it = max_it
         self.tolerance = tol
+        self.w = w  # Add the SOR relaxation factor as a class attribute
+
     
-    @njit
+    # @njit
     def solve(self):
         phi = self.world.phi  # reference to world.phi
         rho = self.world.rho  # reference to world.rho
@@ -27,7 +29,15 @@ class PotentialSolver:
         idx2 = 1.0 / (dh[0] * dh[0])
         idy2 = 1.0 / (dh[1] * dh[1])
         idz2 = 1.0 / (dh[2] * dh[2])
+        
+                # Example variables (these would normally come from your code)
+        # phi = self.world.phi
+        # rho = self.world.rho
+        # dh = self.world.get_dh()
+        ni, nj, nk = self.world.ni, self.world.nj, self.world.nk
+        
     
+
         # Print out the precomputed values
         # print(f"idx2: {idx2}, idy2: {idy2}, idz2: {idz2}")
         
@@ -36,7 +46,6 @@ class PotentialSolver:
     
         L2 = 0  # norm
         converged = False
-    
         # solve potential
         for it in range(self.max_solver_it):
             #print(f"Iteration {it + 1}/{self.max_solver_it}")
@@ -53,14 +62,14 @@ class PotentialSolver:
                                   (2 * idx2 + 2 * idy2 + 2 * idz2)
     
                         # SOR
-                        phi.w_at(i, j, k, phi[i, j, k] + 1.4 * (phi_new - phi[i, j, k]))
-    
+                        phi.w_at(i, j, k, phi[i, j, k] + self.w  * (phi_new - phi[i, j, k]))
+          
             # check for convergence every 25 iterations
             if it % 50 == 0 and it != 0:
                 #print('check for convergence')
                 sum_sq = 0
                 for i in range(1, self.world.ni - 1):
-                    for j in range(1, self.world.nj - 1):
+                    for j in range(1, self.world.nj - 1):   
                         for k in range(1, self.world.nk - 1):
                             R = (-phi[i, j, k] * (2 * idx2 + 2 * idy2 + 2 * idz2) +
                                  rho[i, j, k] / Const.EPS_0 +
