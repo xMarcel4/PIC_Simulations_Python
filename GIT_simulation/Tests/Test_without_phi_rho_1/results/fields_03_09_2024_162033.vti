@@ -1,0 +1,4 @@
+<VTKFile type="ImageData">
+<ImageData Origin="-0.1 -0.1 0.0" Spacing="0.01 0.01 0.01" WholeExtent="0 20 0 20 0 40">
+<PointData>
+<DataArray Name="object_id" NumberOfComponents="1" format="ascii" type="Int32">
